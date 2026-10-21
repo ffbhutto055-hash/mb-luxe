@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MB Luxe | Luxury Perfumes</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0c0c0c;color:#fff;font-family:Arial,sans-serif}
+header{padding:20px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #393024}
+.logo{font-size:24px;color:#d9b56d;font-weight:bold;letter-spacing:2px}
+.cart{background:#d9b56d;color:#111;border:0;border-radius:6px;padding:10px;font-weight:bold}
+.hero{text-align:center;padding:48px 18px;background:linear-gradient(135deg,#242019,#080808)}
+.hero small{color:#d9b56d;letter-spacing:3px}
+h1{font-size:38px;margin:18px 0 12px}
+.hero p{color:#c7c2b8;line-height:1.6}
+h2{text-align:center;color:#d9b56d;margin:32px 0 20px}
+.products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px}
+.card{background:#191919;border:1px solid #342e24;border-radius:10px;overflow:hidden}
+.card img{width:100%;height:175px;object-fit:cover;background:#27231d}
+.info{padding:12px}
+.info h3{font-size:16px;margin:4px 0 8px}
+.info p{font-size:12px;color:#bbb;min-height:28px}
+.price{color:#e3c27e;font-weight:bold;margin:12px 0}
+.add{width:100%;padding:11px;background:#d9b56d;color:#111;border:0;border-radius:5px;font-weight:bold}
+section{padding-bottom:25px}
+#cartBox{margin:15px;padding:16px;background:#191919;border-radius:10px;display:none}
+#cartItems p{border-bottom:1px solid #444;padding:8px 0}
+input,textarea{width:100%;padding:12px;margin:7px 0;background:#292929;color:white;border:1px solid #555;border-radius:5px}
+.submit{width:100%;padding:13px;background:#d9b56d;border:0;border-radius:5px;font-weight:bold}
+footer{text-align:center;padding:24px;color:#aaa;border-top:1px solid #393024}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">MB LUXE</div>
+  <button class="cart" onclick="showCart()">Cart 🛒 <span id="count">0</span></button>
+</header>
+
+<div class="hero">
+  <small>YOUR SIGNATURE FRAGRANCE</small>
+  <h1>Luxury in Every Drop</h1>
+  <p>Discover fragrances that make every moment unforgettable.</p>
+  <button class="cart" onclick="document.getElementById('shop').scrollIntoView()">Explore Collection</button>
+</div>
+
+<section id="shop">
+<h2>Our Collection</h2>
+<div class="products" id="products"></div>
+</section>
+
+<div id="cartBox">
+<h2>Your Shopping Cart</h2>
+<div id="cartItems"></div>
+<p id="total"></p>
+<h3>Delivery Details</h3>
+<form id="orderForm">
+<input id="customer" placeholder="Your full name" required>
+<input id="phone" placeholder="Mobile number" type="tel" required>
+<textarea id="address" placeholder="Complete delivery address" required></textarea>
+<button class="submit" type="submit">Place COD Order</button>
+</form>
+<p id="message"></p>
+</div>
+
+<footer>MB LUXE · Luxury Perfumes<br><br>Made with care in Pakistan</footer>
+
+<script>
+const perfumes = [
+ {id:1,name:"Royal Oud",category:"Men",price:2500,desc:"Bold, rich and elegant.",img:"https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=500&q=80"},
+ {id:2,name:"Rose Bloom",category:"Women",price:2200,desc:"Soft and floral fragrance.",img:"https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=500&q=80"},
+ {id:3,name:"Amber Luxe",category:"Unisex",price:2800,desc:"Warm and luxurious notes.",img:"https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=500&q=80"},
+ {id:4,name:"Oud Royale",category:"Men",price:3000,desc:"A memorable signature scent.",img:"https://images.unsplash.com/photo-1595425970377-c9703cf48b6d?auto=format&fit=crop&w=500&q=80"}
+];
+let cart=[];
+const money=n=>"Rs. "+n.toLocaleString("en-PK");
+
+document.getElementById("products").innerHTML=perfumes.map(p=>`
+<div class="card">
+<img src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">
+<div class="info">
+<h3>${p.name}</h3>
+<small>${p.category}</small>
+<p>${p.desc}</p>
+<div class="price">${money(p.price)}</div>
+<button class="add" onclick="addToCart(${p.id})">Add to Cart</button>
+</div></div>`).join("");
+
+function addToCart(id){
+ const item=cart.find(x=>x.id===id);
+ if(item)item.qty++;
+ else cart.push({...perfumes.find(x=>x.id===id),qty:1});
+ document.getElementById("count").textContent=cart.reduce((s,x)=>s+x.qty,0);
+ renderCart();
+}
+function renderCart(){
+ document.getElementById("cartItems").innerHTML=cart.length?cart.map(x=>`<p>${x.name} × ${x.qty} — ${money(x.price*x.qty)} <button onclick="removeItem(${x.id})">Remove</button></p>`).join(""):"Your cart is empty.";
+ document.getElementById("total").textContent="Total: "+money(cart.reduce((s,x)=>s+x.price*x.qty,0));
+}
+function removeItem(id){
+ cart=cart.filter(x=>x.id!==id);
+ document.getElementById("count").textContent=cart.reduce((s,x)=>s+x.qty,0);
+ renderCart();
+}
+function showCart(){
+ document.getElementById("cartBox").style.display="block";
+ renderCart();
+ document.getElementById("cartBox").scrollIntoView({behavior:"smooth"});
+}
+document.getElementById("orderForm").addEventListener("submit",function(e){
+ e.preventDefault();
+ if(!cart.length){document.getElementById("message").textContent="Please add a perfume to your cart first.";return;}
+ document.getElementById("message").textContent="Demo checkout only. Your order has NOT been sent or saved yet. We will connect real COD orders in the next step.";
+});
+</script>
+</body>
+  </html>
+                                                                              
