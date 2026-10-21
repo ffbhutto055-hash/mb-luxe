@@ -1,0 +1,204 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MB Luxe | Perfume Store</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d0d0d;color:#fff;font-family:Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:18px;background:#151515;border-bottom:1px solid #6e5935}
+.logo{font-size:25px;font-weight:bold;letter-spacing:2px;color:#e3c27e}
+button{cursor:pointer}
+.btn{background:#d8b66d;color:#151515;border:0;padding:12px;border-radius:5px;font-weight:bold}
+.hero{text-align:center;padding:55px 18px;background:linear-gradient(140deg,#30271a,#0d0d0d)}
+.hero h1{font-size:38px;margin:15px 0}
+.hero p{color:#ccc;line-height:1.6}
+h2{text-align:center;color:#e3c27e}
+.products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px}
+.card{background:#1b1b1b;border:1px solid #3c3325;border-radius:9px;overflow:hidden}
+.card img{width:100%;height:165px;object-fit:cover;background:#29231a}
+.info{padding:11px}
+.info h3{margin:5px 0}
+.info p{font-size:13px;color:#bbb;min-height:30px}
+.price{color:#e3c27e;font-weight:bold;margin:10px 0}
+.add{width:100%}
+#cartBox{display:none;margin:12px;padding:16px;background:#1b1b1b;border-radius:8px}
+input,textarea{width:100%;padding:12px;margin:7px 0;background:#292929;color:white;border:1px solid #555;border-radius:5px}
+.line{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #444;padding:10px 0}
+.muted{color:#bbb;font-size:13px}
+footer{text-align:center;padding:25px;color:#aaa;border-top:1px solid #444;margin-top:25px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">MB LUXE</div>
+  <button class="btn" onclick="showCart()">Cart 🛒 <span id="count">0</span></button>
+</header>
+
+<div class="hero">
+  <p style="color:#e3c27e;letter-spacing:3px">YOUR SIGNATURE FRAGRANCE</p>
+  <h1>Luxury in Every Drop</h1>
+  <p>Discover your next signature scent.</p>
+  <button class="btn" onclick="document.getElementById('shop').scrollIntoView()">Shop Now</button>
+</div>
+
+<section id="shop">
+<h2>Our Perfumes</h2>
+<p id="loading" style="text-align:center">Loading perfumes...</p>
+<div class="products" id="products"></div>
+</section>
+
+<div id="cartBox">
+<h2>Your Cart</h2>
+<div id="cartItems"></div>
+<p>Delivery charges: <strong>Rs. 300</strong></p>
+<p id="total" style="color:#e3c27e;font-weight:bold"></p>
+<h3>Cash on Delivery</h3>
+<form id="orderForm">
+<input id="customer" placeholder="Full name" required maxlength="100">
+<input id="phone" placeholder="Mobile number" type="tel" required maxlength="25">
+<textarea id="address" placeholder="Complete delivery address" required maxlength="500"></textarea>
+<button class="btn" style="width:100%" type="submit">Place COD Order</button>
+</form>
+<p id="message" class="muted"></p>
+</div>
+
+<footer>MB LUXE · Luxury Perfumes<br><br>Cash on Delivery · Pakistan</footer>
+
+<script>
+const SUPABASE_URL = "https://rasirdsjnmsfspinuhqq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_E1OeCnSxCRLqJ13CAvSsKg_N3xLdiEC";
+const DELIVERY = 300;
+
+const fallbackImages = [
+ "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=500&q=80",
+ "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=500&q=80",
+ "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=500&q=80"
+];
+
+let perfumes = [];
+let cart = [];
+
+const money = n => "Rs. " + Number(n).toLocaleString("en-PK");
+
+async function loadProducts(){
+ try{
+  const response = await fetch(
+   SUPABASE_URL + "/rest/v1/products?select=id,name,category,description,price,image_url,stock&order=id.asc",
+   {headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}}
+  );
+  if(!response.ok) throw new Error("Products could not be loaded");
+  perfumes = await response.json();
+  document.getElementById("loading").textContent =
+   perfumes.length ? "" : "No perfumes added yet.";
+  renderProducts();
+ }catch(error){
+  document.getElementById("loading").textContent =
+   "Could not load products. Please check Supabase settings and permissions.";
+ }
+}
+
+function renderProducts(){
+ document.getElementById("products").innerHTML = perfumes.map((p,i)=>`
+  <div class="card">
+   <img src="${safeImage(p.image_url) || fallbackImages[i % fallbackImages.length]}"
+        alt="${escapeText(p.name)}">
+   <div class="info">
+    <h3>${escapeText(p.name)}</h3>
+    <span class="muted">${escapeText(p.category)}</span>
+    <p>${escapeText(p.description || "Discover this fragrance.")}</p>
+    <div class="price">${money(p.price)}</div>
+    <button class="btn add" onclick="addToCart(${Number(p.id)})"
+      ${Number(p.stock)<=0?"disabled":""}>
+      ${Number(p.stock)<=0?"Out of stock":"Add to Cart"}
+    </button>
+   </div>
+  </div>`).join("");
+}
+
+function escapeText(value){
+ return String(value ?? "").replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[c]));
+}
+function safeImage(value){
+ const s=String(value || "");
+ return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s]*)?$/i.test(s) ? s : "";
+}
+function addToCart(id){
+ const p=perfumes.find(x=>Number(x.id)===id);
+ if(!p || Number(p.stock)<=0)return;
+ const item=cart.find(x=>Number(x.id)===id);
+ if(item){
+  if(item.qty>=Number(p.stock)){alert("Maximum available stock reached.");return;}
+  item.qty++;
+ }else cart.push({...p,qty:1});
+ updateCart();
+}
+function removeItem(id){
+ cart=cart.filter(x=>Number(x.id)!==id);
+ updateCart();
+}
+function updateCart(){
+ document.getElementById("count").textContent=cart.reduce((s,x)=>s+x.qty,0);
+ document.getElementById("cartItems").innerHTML=cart.length?
+ cart.map(x=>`<div class="line"><span>${escapeText(x.name)} × ${x.qty}<br>${money(Number(x.price)*x.qty)}</span><button onclick="removeItem(${Number(x.id)})">Remove</button></div>`).join("")
+ :"Your cart is empty.";
+ const subtotal=cart.reduce((s,x)=>s+Number(x.price)*x.qty,0);
+ document.getElementById("total").textContent="Total: "+money(subtotal+(cart.length?DELIVERY:0));
+}
+function showCart(){
+ document.getElementById("cartBox").style.display="block";
+ updateCart();
+ document.getElementById("cartBox").scrollIntoView({behavior:"smooth"});
+}
+
+document.getElementById("orderForm").addEventListener("submit",async function(e){
+ e.preventDefault();
+ const message=document.getElementById("message");
+ if(!cart.length){message.textContent="Please add a perfume first.";return;}
+
+ const button=this.querySelector("button[type=submit]");
+ button.disabled=true;
+ message.textContent="Submitting order...";
+
+ const subtotal=cart.reduce((s,x)=>s+Number(x.price)*x.qty,0);
+ const order={
+  customer_name:document.getElementById("customer").value.trim(),
+  phone:document.getElementById("phone").value.trim(),
+  address:document.getElementById("address").value.trim(),
+  items:cart.map(x=>({product_id:x.id,name:x.name,quantity:x.qty,unit_price:Number(x.price)})),
+  total:subtotal+DELIVERY,
+  payment_method:"COD"
+ };
+
+ try{
+  const response=await fetch(SUPABASE_URL+"/rest/v1/orders",{
+   method:"POST",
+   headers:{
+    "apikey":SUPABASE_KEY,
+    "Authorization":"Bearer "+SUPABASE_KEY,
+    "Content-Type":"application/json",
+    "Prefer":"return=minimal"
+   },
+   body:JSON.stringify(order)
+  });
+  if(!response.ok) throw new Error("Order could not be submitted");
+  message.textContent="Order submitted! Keep your phone available for confirmation.";
+  cart=[];
+  updateCart();
+  this.reset();
+ }catch(error){
+  message.textContent="Order was not submitted. Please check database permissions and try again.";
+ }finally{
+  button.disabled=false;
+ }
+});
+
+loadProducts();
+</script>
+</body>
+  </html>
+  
